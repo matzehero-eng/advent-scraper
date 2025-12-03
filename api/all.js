@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     const toDay = Math.min(new Date().getDate(), 24);
 
     for (let day = 1; day <= toDay; day++) {
-      const url = `https://saarbruecker-adventskalender.de/${day}-dezember-2025/`;
+      const url = `https://saarbruecker-adventskalender.de/${day}-dezember/`;
 
       const html = await fetch(url).then(r => r.text());
       const $ = cheerio.load(html);
