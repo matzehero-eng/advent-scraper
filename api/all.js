@@ -2,28 +2,26 @@ import * as cheerio from "cheerio";
 
 export default async function handler(req, res) {
   try {
-    let allNumbers = [];
+    const results = [];
 
-    // Tage 1 bis heute durchgehen
-    const today = new Date();
-    const maxDay = Math.min(today.getDate(), 24);
+    const toDay = Math.min(new Date().getDate(), 24);
 
-    for (let day = 1; day <= maxDay; day++) {
-      const url = `https://saarbruecker-adventskalender.de/${day}-dezember/`;
+    for (let day = 1; day <= toDay; day++) {
+      const url = `https://saarbruecker-adventskalender.de/${day}-dezember-2025/`;
+
       const html = await fetch(url).then(r => r.text());
       const $ = cheerio.load(html);
 
       $("table tbody tr").each((i, row) => {
         const cols = $(row).find("td");
-
         if (cols.length < 3) return;
 
-        cols.slice(2).each((j, col) => {
+        cols.slice(2).each((i, col) => {
           const txt = $(col).text().trim();
 
-          // Nur echte Losnummern (3–4 Stellen)
+          // Nur echte Losnummern 3–4-stellig
           if (/^\d{3,4}$/.test(txt)) {
-            allNumbers.push({ day, number: txt });
+            results.push({ day, number: txt });
           }
         });
       });
@@ -31,7 +29,7 @@ export default async function handler(req, res) {
 
     res.status(200).json({
       day: "all",
-      numbers: allNumbers,
+      numbers: results
     });
 
   } catch (e) {
