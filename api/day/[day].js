@@ -1,19 +1,40 @@
+import cheerio from "cheerio";
+
 export default async function handler(req, res) {
   const { day } = req.query;
 
   const url = `https://saarbruecker-adventskalender.de/${day}-dezember/`;
 
-  // Desktop User-Agent (sehr wichtig!)
-  const html = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-    },
-  }).then((r) => r.text());
+  try {
+    const html = await fetch(url).then(r => r.text());
+    const $ = cheerio.load(html);
 
-  // Alle 3–5 stelligen Nummern extrahieren
-  const matches = [...html.matchAll(/\b\d{3,5}\b/g)];
-  const numbers = [...new Set(matches.map((m) => m[0]))];
+    const numbers = [];
 
-  res.status(200).json({ day, numbers });
+    // Jede Gewinn-Row durchgehen
+    $("table tbody tr").each((i, row) => {
+      const cols = $(row).find("td");
+
+      // wir brauchen nur echte Gewinnzeilen (mind. 3 Spalten)
+      if (cols.length < 3) return;
+
+      // ab Spalte 3 beginnen (Index 2)
+      cols.slice(2).each((j, col) => {
+        const txt = $(col).text().trim();
+
+        // Nur echte Losnummern sind numerisch
+        if (/^\d+$/.test(txt)) {
+          numbers.push(txt);
+        }
+      });
+    });
+
+    res.status(200).json({
+      day,
+      numbers,
+    });
+
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 }
