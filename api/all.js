@@ -1,38 +1,48 @@
-// api/all.js
+import * as cheerio from "cheerio";
 
 export default async function handler(req, res) {
   try {
-    // Maximal 24 Tage im Adventskalender
-    const today = Math.min(new Date().getDate(), 24);
-
-    const baseUrl =
-      process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : `http://${req.headers.host}`;
-
-    const allNumbers = [];
+    const numbers = [];
+    const today = Math.min(new Date().getDate(), 24); // max. 24 Tage
 
     for (let day = 1; day <= today; day++) {
-      const resp = await fetch(`${baseUrl}/api/day/${day}`);
+      // WICHTIG: keine Jahreszahl!
+      const url = `https://saarbruecker-adventskalender.de/${day}-dezember/`;
 
-      if (!resp.ok) {
-        throw new Error(`Fehler beim Laden von /api/day/${day}: ${resp.status}`);
+      const response = await fetch(url);
+
+      // Wenn der Tag noch nicht online ist oder es einen Fehler gibt: überspringen
+      if (!response.ok) {
+        continue;
       }
 
-      const data = await resp.json();
-      const nums = data.numbers || [];
+      const html = await response.text();
+      const $ = cheerio.load(html);
 
-      for (const num of nums) {
-        allNumbers.push({ day, number: num });
-      }
+      $("table tbody tr").each((i, row) => {
+        const cols = $(row).find("td");
+        if (cols.length < 3) return; // wir brauchen mindestens 3 Spalten
+
+        // ab Spalte 3 stehen die Losnummern
+        cols.slice(2).each((j, col) => {
+          const txt = $(col).text().trim();
+
+          // nur echte 3–4-stellige Nummern
+          if (/^\d{3,4}$/.test(txt)) {
+            numbers.push({
+              day,
+              number: txt,
+            });
+          }
+        });
+      });
     }
 
     res.status(200).json({
       day: "all",
-      numbers: allNumbers,
+      numbers,
     });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e.message });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
   }
 }
