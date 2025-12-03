@@ -1,33 +1,40 @@
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
 
 export default async function handler(req, res) {
-    const base = "https://saarbruecker-adventskalender.de";
-    const allNumbers = {};
+  try {
+    let allNumbers = [];
 
-    for (let day = 1; day <= 24; day++) {
-        const url = `${base}/${day}-dezember/`;
-        try {
-            const html = await fetch(url).then(r => r.text());
-            const $ = cheerio.load(html);
+    // Tage 1 bis heute durchgehen
+    const today = new Date();
+    const maxDay = Math.min(today.getDate(), 24);
 
-            const arr = [];
+    for (let day = 1; day <= maxDay; day++) {
+      const url = `https://saarbruecker-adventskalender.de/${day}-dezember/`;
+      const html = await fetch(url).then(r => r.text());
+      const $ = cheerio.load(html);
 
-            $("table tbody tr").each((i, row) => {
-                const cols = $(row).find("td");
-                if (cols.length < 3) return;
+      $("table tbody tr").each((i, row) => {
+        const cols = $(row).find("td");
 
-                cols.slice(2).each((j, col) => {
-                    const txt = $(col).text().trim();
-                    if (/^\d{1,5}$/.test(txt)) arr.push(txt);
-                });
-            });
+        if (cols.length < 3) return;
 
-            allNumbers[day] = arr;
+        cols.slice(2).each((j, col) => {
+          const txt = $(col).text().trim();
 
-        } catch (e) {
-            allNumbers[day] = [];
-        }
+          // Nur echte Losnummern (3–4 Stellen)
+          if (/^\d{3,4}$/.test(txt)) {
+            allNumbers.push({ day, number: txt });
+          }
+        });
+      });
     }
 
-    res.status(200).json(allNumbers);
+    res.status(200).json({
+      day: "all",
+      numbers: allNumbers,
+    });
+
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 }
