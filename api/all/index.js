@@ -1,49 +1,32 @@
-
-import * as cheerio from "cheerio";
-
+// api/all/index.js
 export default async function handler(req, res) {
   try {
-    const numbers = [];
     const today = Math.min(new Date().getDate(), 24); // max. 24 Tage
+    const allNumbers = [];
 
+    // FÜR JEDEN TAG BIS HEUTE /api/day/:day AUFRUFEN
     for (let day = 1; day <= today; day++) {
-      // WICHTIG: keine Jahreszahl!
-      const url = `https://saarbruecker-adventskalender.de/${day}-dezember/`;
+      // feste Domain nehmen – das ist dein Vercel-Projekt
+      const url = `https://advent-scraper.vercel.app/api/day/${day}`;
 
       const response = await fetch(url);
-
-      // Wenn der Tag noch nicht online ist oder es einen Fehler gibt: überspringen
       if (!response.ok) {
-        continue;
+        throw new Error(`Fehler beim Laden von /api/day/${day}: ${response.status}`);
       }
 
-      const html = await response.text();
-      const $ = cheerio.load(html);
+      const data = await response.json();
 
-      $("table tbody tr").each((i, row) => {
-        const cols = $(row).find("td");
-        if (cols.length < 3) return; // wir brauchen mindestens 3 Spalten
-
-        // ab Spalte 3 stehen die Losnummern
-        cols.slice(2).each((j, col) => {
-          const txt = $(col).text().trim();
-
-          // nur echte 3–4-stellige Nummern
-          if (/^\d{3,4}$/.test(txt)) {
-            numbers.push({
-              day,
-              number: txt,
-            });
-          }
-        });
-      });
+      // Alle Zahlen dieses Tages in die Gesamt-Liste schieben
+      for (const num of data.numbers) {
+        allNumbers.push({ day, number: num });
+      }
     }
 
     res.status(200).json({
       day: "all",
-      numbers,
+      numbers: allNumbers,
     });
-  } catch (err) {
-    res.status(500).json({ error: String(err) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 }
