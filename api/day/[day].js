@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 
 // optional, aber hilft Vercel zu wissen, dass es Node ist
 export const config = {
-  runtime: "nodejs18.x"
+  runtime: "nodejs"
 };
 
 export default async function handler(req, res) {
