@@ -1,5 +1,16 @@
 // api/all/index.js
 export default async function handler(req, res) {
+
+  // --- CORS FIX ---
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+  // --- ENDE CORS FIX ---
+
   try {
     const today = Math.min(new Date().getDate(), 24); // max. 24 Tage
     const allNumbers = [];
