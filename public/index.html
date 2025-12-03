@@ -194,6 +194,13 @@ async function loadAll() {
     return allData;
 }
 
+    // Enter drücken -> checkWin() auslösen
+document.getElementById("losnummer").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        checkWin();
+    }
+});
+
 async function checkWin() {
     const num = document.getElementById("losnummer").value.trim();
     const resultBox = document.getElementById("result");
