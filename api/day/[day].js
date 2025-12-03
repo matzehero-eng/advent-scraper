@@ -1,40 +1,52 @@
-import cheerio from "cheerio";
+import { load } from "cheerio";
 
 export default async function handler(req, res) {
-  const { day } = req.query;
-  const url = `https://saarbruecker-adventskalender.de/${day}-dezember/`;
-
   try {
-    const response = await fetch(url);
-    const html = await response.text();
-    const $ = cheerio.load(html);
+    const { day } = req.query;
+
+    const url = `https://saarbruecker-adventskalender.de/${day}-dezember/`;
+    const html = await fetch(url).then(r => r.text());
+
+    const $ = load(html);
 
     const numbers = [];
 
+    // Jede Tabellenzeile durchgehen
     $("table tbody tr").each((i, row) => {
       const cols = $(row).find("td");
 
-      // Wir ignorieren Zeilen mit weniger als 3 Spalten
+      // Nur Zeilen mit mind. 3 Spalten = echte Gewinnzeilen
       if (cols.length < 3) return;
 
-      // Nur rechte Spalten ab Index 2 = echte Losnummern
+      // Ab Spalte 3 beginnen (Index 2)
       cols.slice(2).each((j, col) => {
+        const t = $(col).text().trim();
 
-        // Exakt den Zellen-Text extrahieren
-        const cellText = $(col).clone().children().remove().end().text().trim();
+        // Filter: nur echte Losnummern
+        // ❗ Regeln:
+        //  - rein numerisch
+        //  - nicht der Preis (endet auf €)
+        //  - nicht die laufende Gewinnnummer (1,2,3,...)
+        //  - max 4 Stellen (keine 5-stelligen Produktpreise)
+        if (/^\d+$/.test(t)) {
+          const num = Number(t);
 
-        // Alle "isolierten" 3- oder 4-stelligen Zahlen extrahieren
-        const matches = cellText.match(/\b\d{3,4}\b/g);
-
-        if (matches) {
-          numbers.push(...matches);
+          if (
+            num > 100 &&      // keine 1–99 (Preisangaben etc.)
+            num < 10000       // max 4-stellig
+          ) {
+            numbers.push(t);
+          }
         }
       });
     });
 
-    return res.status(200).json({ day, numbers });
+    res.status(200).json({
+      day,
+      numbers,
+    });
 
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    res.status(500).json({ error: e.message });
   }
 }
