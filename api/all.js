@@ -1,38 +1,38 @@
-import * as cheerio from "cheerio";
+// api/all.js
 
 export default async function handler(req, res) {
   try {
-    const results = [];
+    // Maximal 24 Tage im Adventskalender
+    const today = Math.min(new Date().getDate(), 24);
 
-    const toDay = Math.min(new Date().getDate(), 24);
+    const baseUrl =
+      process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : `http://${req.headers.host}`;
 
-    for (let day = 1; day <= toDay; day++) {
-      const url = `https://saarbruecker-adventskalender.de/${day}-dezember/`;
+    const allNumbers = [];
 
-      const html = await fetch(url).then(r => r.text());
-      const $ = cheerio.load(html);
+    for (let day = 1; day <= today; day++) {
+      const resp = await fetch(`${baseUrl}/api/day/${day}`);
 
-      $("table tbody tr").each((i, row) => {
-        const cols = $(row).find("td");
-        if (cols.length < 3) return;
+      if (!resp.ok) {
+        throw new Error(`Fehler beim Laden von /api/day/${day}: ${resp.status}`);
+      }
 
-        cols.slice(2).each((i, col) => {
-          const txt = $(col).text().trim();
+      const data = await resp.json();
+      const nums = data.numbers || [];
 
-          // Nur echte Losnummern 3–4-stellig
-          if (/^\d{3,4}$/.test(txt)) {
-            results.push({ day, number: txt });
-          }
-        });
-      });
+      for (const num of nums) {
+        allNumbers.push({ day, number: num });
+      }
     }
 
     res.status(200).json({
       day: "all",
-      numbers: results
+      numbers: allNumbers,
     });
-
   } catch (e) {
+    console.error(e);
     res.status(500).json({ error: e.message });
   }
 }
