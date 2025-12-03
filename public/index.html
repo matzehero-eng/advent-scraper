@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Adventskalender – Gewinn prüfen</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+    /* --- Farben --- */
+    :root {
+        --blue:   #1A4B84;
+        --orange: #F29F05;
+        --white:  #ffffff;
+    }
+
+    body {
+        font-family: system-ui, Arial;
+        margin: 0;
+        padding: 0;
+        background: var(--blue);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden; /* für Schneefall */
+    }
+
+    /* Schneefall */
+    .snowflake {
+        position: fixed;
+        top: -10px;
+        color: white;
+        font-size: 12px;
+        user-select: none;
+        pointer-events: none;
+        animation-name: fall;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+    }
+
+    @keyframes fall {
+        0%   { transform: translateY(0); opacity: 1; }
+        100% { transform: translateY(110vh); opacity: 0.2; }
+    }
+
+.gift-anim {
+    display: inline-block;
+    animation: giftPulse 0.9s ease-in-out infinite;
+}
+
+@keyframes giftPulse {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.18); }
+    100% { transform: scale(1); }
+}
+
+    /* Card */
+    .card {
+        background: rgba(255,255,255,0.15);
+        backdrop-filter: blur(12px);
+        padding: 30px;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 420px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+        color: var(--white);
+        text-align: center;
+        animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+        font-size: 26px;
+        margin-bottom: 20px;
+        letter-spacing: 0.5px;
+    }
+
+    label {
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    input {
+        width: 100%;
+        padding: 12px;
+        font-size: 18px;
+        border-radius: 10px;
+        border: none;
+        margin-top: 8px;
+        margin-bottom: 15px;
+        background: #ffffffcc;
+        color: #000;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        font-size: 18px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        background: var(--orange);
+        color: #000;
+        font-weight: bold;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        background: #d88d02;
+        transform: translateY(-1px);
+    }
+
+    #result {
+        margin-top: 18px;
+        font-size: 20px;
+        font-weight: bold;
+        min-height: 30px;
+    }
+
+    #loader {
+        display: none;
+        margin-top: 18px;
+        font-size: 18px;
+    }
+
+    /* animierende Punkte */
+    .dots::after {
+        content: '';
+        animation: dots 1.4s steps(3, end) infinite;
+    }
+    @keyframes dots {
+        0%   { content: ''; }
+        33%  { content: '.'; }
+        66%  { content: '..'; }
+        100% { content: '...'; }
+    }
+</style>
+</head>
+
+<body>
+
+<!-- Schneeflocken erzeugen -->
+<script>
+for (let i = 0; i < 35; i++) {
+    let snow = document.createElement("div");
+    snow.className = "snowflake";
+    snow.textContent = "❄";
+    snow.style.left = Math.random() * 100 + "vw";
+    snow.style.opacity = (Math.random()*0.7 + 0.3);
+    snow.style.fontSize = (Math.random()*10 + 10) + "px";
+    snow.style.animationDuration = (Math.random()*5 + 5) + "s";
+    snow.style.animationDelay = Math.random() * 5 + "s";
+    document.body.appendChild(snow);
+}
+</script>
+
+<div class="card">
+    <h1>Adventskalender – Gewinn prüfen</h1>
+
+    <label>Deine Losnummer:</label>
+    <input id="losnummer" type="text" placeholder="z.B. 5324">
+
+    <button onclick="checkWin()">Prüfen</button>
+
+    <div id="loader" class="dots">Bitte warten</div>
+    <div id="result"></div>
+</div>
+
+<script>
+let allData = null;
+
+async function loadAll() {
+    if (allData) return allData;
+
+    const loader = document.getElementById("loader");
+    loader.style.display = "block";
+
+    const res = await fetch("https://advent-scraper.vercel.app/api/all");
+    const api = await res.json();
+
+    loader.style.display = "none";
+
+    const grouped = {};
+    for (const entry of api.numbers) {
+        if (!grouped[entry.day]) grouped[entry.day] = [];
+        grouped[entry.day].push(entry.number);
+    }
+
+    allData = grouped;
+    return allData;
+}
+
+async function checkWin() {
+    const num = document.getElementById("losnummer").value.trim();
+    const resultBox = document.getElementById("result");
+
+    if (!num) {
+        resultBox.innerHTML = "Bitte eine Losnummer eingeben.";
+        return;
+    }
+
+    const data = await loadAll();
+
+    for (const day in data) {
+        if (data[day].includes(num)) {
+
+            const link = `https://saarbruecker-adventskalender.de/${day}-dezember/`;
+
+            resultBox.innerHTML = `
+                <span class="gift-anim">🎁</span><br>
+                🎉 <b>Du hast gewonnen am ${day}. Dezember!</b><br>
+                <small>
+                    <a href="${link}" target="_blank" 
+                       style="color:#F29F05; font-weight:bold; text-decoration:none;">
+                        ➡️ Zu deinem Gewinn
+                    </a>
+                </small>
+            `;
+            return;
+        }
+    }
+
+    resultBox.innerHTML = `😢 Leider kein Gewinn bisher.`;
+}
+</script>
+
+</body>
+</html>
