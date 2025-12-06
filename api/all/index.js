@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
     // FÜR JEDEN TAG BIS HEUTE /api/day/:day AUFRUFEN
     for (let day = 1; day <= today; day++) {
-      // feste Domain nehmen – das ist dein Vercel-Projekt
+      // feste Domain
       const url = `https://advent-scraper.vercel.app/api/day/${day}`;
 
       const response = await fetch(url);
